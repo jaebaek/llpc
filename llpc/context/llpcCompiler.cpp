@@ -846,7 +846,10 @@ Result Compiler::buildPipelineWithRelocatableElf(Context *context, ArrayRef<cons
       auto data = reinterpret_cast<const char *>(elfBin.pCode);
       elf[stage].assign(data, data + elfBin.codeSize);
       LLPC_OUTS("Cache hit for shader stage " << getShaderStageName(static_cast<ShaderStage>(stage)) << "\n");
-      stageCacheAccesses[stage] = CacheAccessInfo::CacheHit;
+      if (userShaderCache == nullptr)
+        stageCacheAccesses[stage] = CacheAccessInfo::InternalCacheHit;
+      else
+        stageCacheAccesses[stage] = CacheAccessInfo::CacheHit;
       continue;
     }
     LLPC_OUTS("Cache miss for shader stage " << getShaderStageName(static_cast<ShaderStage>(stage)) << "\n");
@@ -1520,14 +1523,20 @@ Result Compiler::BuildGraphicsPipeline(const GraphicsPipelineBuildInfo *pipeline
   Result cacheResult = Result::ErrorUnknown;
 
   if (!buildingRelocatableElf) {
-    if (m_cache)
+    if (m_cache) {
       cacheResult = lookUpCaches(userCache, &hashId, &elfBin, &cacheEntry);
-    else
+      if (cacheResult == Result::Success)
+        pipelineOut->pipelineCacheAccess = CacheAccessInfo::CacheHit;
+    } else {
       cacheEntryState = lookUpShaderCaches(appCache, &cacheHash, &elfBin, &shaderCache, &hEntry);
-
-    if ((cacheEntryState == ShaderEntryState::Ready) || (m_cache && (cacheResult == Result::Success)))
-      pipelineOut->pipelineCacheAccess = CacheAccessInfo::CacheHit;
-    else
+      if (cacheEntryState == ShaderEntryState::Ready) {
+        if (appCache == nullptr)
+          pipelineOut->pipelineCacheAccess = CacheAccessInfo::InternalCacheHit;
+        else
+          pipelineOut->pipelineCacheAccess = CacheAccessInfo::CacheHit;
+      }
+    }
+    if (pipelineOut->pipelineCacheAccess == CacheAccessInfo::CacheNotChecked)
       pipelineOut->pipelineCacheAccess = CacheAccessInfo::CacheMiss;
   } else {
     cacheEntryState = ShaderEntryState::Compiling;
@@ -1659,14 +1668,20 @@ Result Compiler::BuildComputePipeline(const ComputePipelineBuildInfo *pipelineIn
   Result cacheResult = Result::ErrorUnknown;
 
   if (!buildingRelocatableElf) {
-    if (m_cache)
+    if (m_cache) {
       cacheResult = lookUpCaches(userCache, &hashId, &elfBin, &cacheEntry);
-    else
+      if (cacheResult == Result::Success)
+        pipelineOut->pipelineCacheAccess = CacheAccessInfo::CacheHit;
+    } else {
       cacheEntryState = lookUpShaderCaches(appCache, &cacheHash, &elfBin, &shaderCache, &hEntry);
-
-    if ((cacheEntryState == ShaderEntryState::Ready) || (m_cache && (cacheResult == Result::Success)))
-      pipelineOut->pipelineCacheAccess = CacheAccessInfo::CacheHit;
-    else
+      if (cacheEntryState == ShaderEntryState::Ready) {
+        if (appCache == nullptr)
+          pipelineOut->pipelineCacheAccess = CacheAccessInfo::InternalCacheHit;
+        else
+          pipelineOut->pipelineCacheAccess = CacheAccessInfo::CacheHit;
+      }
+    }
+    if (pipelineOut->pipelineCacheAccess == CacheAccessInfo::CacheNotChecked)
       pipelineOut->pipelineCacheAccess = CacheAccessInfo::CacheMiss;
   } else
     cacheEntryState = ShaderEntryState::Compiling;
