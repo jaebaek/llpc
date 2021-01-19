@@ -1282,8 +1282,11 @@ Result Compiler::buildPipelineInternal(Context *context, ArrayRef<const Pipeline
   if (result == Result::Success) {
     const uint32_t llpcVersion[2] = {LLPC_INTERFACE_MAJOR_VERSION, LLPC_INTERFACE_MINOR_VERSION};
     auto hash = context->getPipelineContext()->getPipelineHashCodeWithoutCompact();
-    addHashSectionToElf(*pipelineElf, ArrayRef<uint8_t>(hash.bytes),
-                        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(llpcVersion), sizeof(llpcVersion)));
+    NoteEntry notes[] = {
+        {"llpc_cache_hash", ArrayRef<uint8_t>(hash.bytes)},
+        {"llpc_version", ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(llpcVersion), sizeof(llpcVersion))},
+    };
+    addNotesToELF(*pipelineElf, notes);
   }
 
   return result;

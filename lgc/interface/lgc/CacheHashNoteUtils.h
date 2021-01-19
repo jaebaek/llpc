@@ -25,31 +25,27 @@
 /**
  ***********************************************************************************************************************
  * @file  CacheHashNoteUtils.h
- * @brief LLPC header file: contains the definition of LLPC utility function
- * addHashSectionToElf.
+ * @brief LLPC header file: declaration of lgc:: interface
  *
- * @details The function addHashSectionToElf adds a note section
- *          "llpc_cache_hash" (see CacheHashNoteName) in the given ELF to
- *          keep the hash code for the cache, which will be used by cache
- *          creator to identify the mapping between the hash and the shader
- *          ELF.
- *
- * @sa llpc/docs/CacheHashNoteUtils.md
+ * @details The function addNotesToELF adds given note entries to the given ELF.
  ***********************************************************************************************************************
  */
 
 #pragma once
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lgc {
 
-constexpr char CacheHashNoteName[] = "llpc_cache_hash"; // Cache hash note name for .note record.
-constexpr char LlpcVersionNoteName[] = "llpc_version";  // LLPC version note name for .note record.
+// Note entry that will be added to the note section.
+struct NoteEntry {
+  llvm::StringRef name;
+  llvm::ArrayRef<uint8_t> desc;
+};
 
 // =====================================================================================================================
-// Adds a note section "llpc_cache_hash" (see CacheHashNoteName) in the given
-// ELF to keep the hash code for the cache.
+// Adds given note entries to the given ELF.
 //
 // ELF layouts before/after adding new ".note" section and its section header
 // for cache hash:
@@ -92,7 +88,6 @@ constexpr char LlpcVersionNoteName[] = "llpc_version";  // LLPC version note nam
 //  Unknown(0)                (name = llpc_version  size = 8)
 //        0:0000002D 00000004
 //
-void addHashSectionToElf(llvm::SmallVectorImpl<char> &elf, llvm::ArrayRef<uint8_t> cacheHash,
-                         llvm::ArrayRef<uint8_t> llpcVersion);
+void addNotesToELF(llvm::SmallVectorImpl<char> &elf, llvm::ArrayRef<NoteEntry> notes);
 
 } // namespace lgc
